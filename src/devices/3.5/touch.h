@@ -1,16 +1,6 @@
 #ifndef _XLCD_TOUCH
 #define _XLCD_TOUCH
 
-#include <XPT2046_Touchscreen.h>
-
-#define XPT2046_IRQ 36
-#define XPT2046_MOSI 32
-#define XPT2046_MISO 39
-#define XPT2046_CLK 25
-#define XPT2046_CS 33
-
-SPIClass x_touch_spi = SPIClass(HSPI);
-XPT2046_Touchscreen x_touch_touchScreen(XPT2046_CS, XPT2046_IRQ);
 XTouchPanelConfig x_touch_touchConfig;
 
 class ScreenPoint
@@ -51,10 +41,7 @@ void xtouch_loadTouchConfig(XTouchPanelConfig &config)
     // Open file for reading
     File file = xtouch_filesystem_open(SD, xtouch_paths_touch);
 
-    // Allocate a temporary JsonDocument
-    // Don't forget to change the capacity to match your requirements.
-    // Use arduinojson.org/v6/assistant to compute the capacity.
-    StaticJsonDocument<512> doc;
+    JsonDocument doc;
 
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
@@ -71,7 +58,7 @@ void xtouch_loadTouchConfig(XTouchPanelConfig &config)
 
 void xtouch_saveTouchConfig(XTouchPanelConfig &config)
 {
-    StaticJsonDocument<512> doc;
+    JsonDocument doc;
     doc["xCalM"] = config.xCalM;
     doc["yCalM"] = config.yCalM;
     doc["xCalC"] = config.xCalC;
@@ -103,43 +90,50 @@ void xtouch_touch_setup()
     else
     {
         ConsoleInfo.println(F("[XTouch][TOUCH] Touch Setup"));
-        TS_Point p;
         int16_t x1, y1, x2, y2;
 
-        lv_label_set_text(introScreenCaption, "Touch the  " LV_SYMBOL_PLUS "  with the stylus");
+        lv_label_set_text(introScreenCaption, "Touch the  " LV_SYMBOL_PLUS ".");
         lv_timer_handler();
 
         // wait for no touch
-        while (x_touch_touchScreen.touched())
+        int16_t x, y;
+        while (tft.getTouch(&x, &y))
             ;
-        tft.drawFastHLine(0, 10, 20, ILI9341_WHITE);
-        tft.drawFastVLine(10, 0, 20, ILI9341_WHITE);
-        while (!x_touch_touchScreen.touched())
+        tft.drawFastHLine(0, 10, 20, 0xFFFFFFU);
+        tft.drawFastVLine(10, 0, 20, 0xFFFFFFU);
+        while (!tft.getTouch(&x, &y))
             ;
         delay(50);
-        p = x_touch_touchScreen.getPoint();
-        x1 = p.x;
-        y1 = p.y;
-        tft.drawFastHLine(0, 10, 20, ILI9341_BLACK);
-        tft.drawFastVLine(10, 0, 20, ILI9341_BLACK);
+        /// TBD should average over multiple captures
+        tft.getTouch(&x, &y);
+        x1 = x;
+        y1 = y;
+        tft.drawFastHLine(0, 10, 20, 0x000000U);
+        tft.drawFastVLine(10, 0, 20, 0x000000U);
         delay(500);
 
-        while (x_touch_touchScreen.touched())
+        while (tft.getTouch(&x, &y))
             ;
-        tft.drawFastHLine(300, 230, 20, ILI9341_WHITE);
-        tft.drawFastVLine(310, 220, 20, ILI9341_WHITE);
+        tft.drawFastHLine(screenWidth-20, screenHeight-10, 20, 0xFFFFFFU);
+        tft.drawFastVLine(screenWidth-10, screenHeight-20, 20, 0xFFFFFFU);
+        // tft.drawFastHLine(300, 230, 20, 0xFFFFFFU);
+        // tft.drawFastVLine(310, 220, 20, 0xFFFFFFU);
 
-        while (!x_touch_touchScreen.touched())
+        while (!tft.getTouch(&x, &y))
             ;
         delay(50);
-        p = x_touch_touchScreen.getPoint();
-        x2 = p.x;
-        y2 = p.y;
-        tft.drawFastHLine(300, 230, 20, ILI9341_BLACK);
-        tft.drawFastVLine(310, 220, 20, ILI9341_BLACK);
+        tft.getTouch(&x, &y);
+        x2 = x;
+        y2 = y;
+        tft.drawFastHLine(screenWidth-20, screenHeight-10, 20, 0xFFFFFFU);
+        tft.drawFastVLine(screenWidth-10, screenHeight-20, 20, 0xFFFFFFU);
+        // tft.drawFastHLine(300, 230, 20, 0x000000U);
+        // tft.drawFastVLine(310, 220, 20, 0x000000U);
 
-        int16_t xDist = 320 - 40;
-        int16_t yDist = 240 - 40;
+        int16_t xDist = screenWidth - 40;
+        int16_t yDist = screenHeight - 40;
+        // int16_t xDist = 320 - 40;
+        // int16_t yDist = 240 - 40;
 
         x_touch_touchConfig.xCalM = (float)xDist / (float)(x2 - x1);
         x_touch_touchConfig.xCalC = 20.0 - ((float)x1 * x_touch_touchConfig.xCalM);
