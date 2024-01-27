@@ -8,4 +8,7 @@ Usage:
 - compile flash test
 - do not forget to create a FAT32 SD card with your json format network config
 
+Display used:
+- [WT32-SC01 Plus](https://s.click.aliexpress.com/e/_DDUjTVb)
+
 ToDo - proper readme
